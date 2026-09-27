@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_root"
+source ./onnxruntime.env
+
 arch=${1:?usage: build-ort-musl.sh amd64|arm64 x86_64|aarch64}
 alpine_arch=${2:?usage: build-ort-musl.sh amd64|arm64 x86_64|aarch64}
 case "$arch:$alpine_arch" in
@@ -9,7 +13,6 @@ case "$arch:$alpine_arch" in
 esac
 
 alpine_version=3.24.1
-ort_version=1.30.0
 work_root="${RUNNER_TEMP:-/tmp}/ort-musl-${arch}"
 rootfs="$work_root/rootfs"
 output="$PWD/artifacts"
@@ -28,10 +31,9 @@ curl --fail --location --retry 3 "${rootfs_url}.sha256" -o "$work_root/$rootfs_a
 (cd "$work_root" && sha256sum --check "$rootfs_archive.sha256")
 sudo tar --numeric-owner -xzf "$work_root/$rootfs_archive" -C "$rootfs"
 
-ort_url="https://github.com/microsoft/onnxruntime/archive/refs/tags/v${ort_version}.tar.gz"
-curl --fail --location --retry 3 --max-time 600 "$ort_url" -o "$work_root/onnxruntime.tar.gz"
-echo '10045518738889ec63e3a490d248f8cfc342775ce54b134f2996c7e47f744d1bf7332a5d57b3b3072aed5ef4dfeffd0de2593954735c5ce898048f1380b2c91c  onnxruntime.tar.gz' \
-  | (cd "$work_root" && sha512sum --check -)
+ort_url="https://github.com/microsoft/onnxruntime/archive/refs/tags/v${ORT_VERSION}.tar.gz"
+curl --fail --location --retry 3 --max-time 900 "$ort_url" -o "$work_root/onnxruntime.tar.gz"
+printf '%s  onnxruntime.tar.gz\n' "$ORT_SHA512" | (cd "$work_root" && sha512sum --check -)
 sudo mkdir -p "$rootfs/src/onnxruntime" "$rootfs/out"
 sudo tar -xzf "$work_root/onnxruntime.tar.gz" --strip-components=1 -C "$rootfs/src/onnxruntime"
 sudo cp /etc/resolv.conf "$rootfs/etc/resolv.conf"
@@ -69,10 +71,10 @@ CHROOT
 sudo cp "$work_root/build-inside-alpine.sh" "$rootfs/tmp/build-inside-alpine.sh"
 sudo mount --bind /dev "$rootfs/dev"
 sudo mount --bind /proc "$rootfs/proc"
-sudo chroot "$rootfs" /bin/sh /tmp/build-inside-alpine.sh "$arch" "$ort_version"
+sudo chroot "$rootfs" /bin/sh /tmp/build-inside-alpine.sh "$arch" "$ORT_VERSION"
 
 sudo cp -a "$rootfs/out/." "$output/"
 sudo chown -R "$(id -u):$(id -g)" "$output"
-tar -C "$output" -czf "$output/onnxruntime-${ort_version}-linux-${arch}-musl.tar.gz" \
+tar -C "$output" -czf "$output/onnxruntime-${ORT_VERSION}-linux-${arch}-musl.tar.gz" \
   lib LICENSE ThirdPartyNotices.txt architecture version build-packages.txt SHA256SUMS
-echo "Built $output/onnxruntime-${ort_version}-linux-${arch}-musl.tar.gz"
+echo "Built $output/onnxruntime-${ORT_VERSION}-linux-${arch}-musl.tar.gz"
