@@ -9,7 +9,7 @@ case "$arch:$alpine_arch" in
 esac
 
 alpine_version=3.24.1
-ort_version=1.29.0
+ort_version=1.30.0
 work_root="${RUNNER_TEMP:-/tmp}/ort-musl-${arch}"
 rootfs="$work_root/rootfs"
 output="$PWD/artifacts"
@@ -30,7 +30,7 @@ sudo tar --numeric-owner -xzf "$work_root/$rootfs_archive" -C "$rootfs"
 
 ort_url="https://github.com/microsoft/onnxruntime/archive/refs/tags/v${ort_version}.tar.gz"
 curl --fail --location --retry 3 --max-time 600 "$ort_url" -o "$work_root/onnxruntime.tar.gz"
-echo '9ea05f5279fc93fd243a967f3664aaabe9216f6e3ce9358ead662653984476e9cb0cb950947f31f8602541224c946a3ceac91d7c1990ffe2b8314d61361c300f  onnxruntime.tar.gz' \
+echo '10045518738889ec63e3a490d248f8cfc342775ce54b134f2996c7e47f744d1bf7332a5d57b3b3072aed5ef4dfeffd0de2593954735c5ce898048f1380b2c91c  onnxruntime.tar.gz' \
   | (cd "$work_root" && sha512sum --check -)
 sudo mkdir -p "$rootfs/src/onnxruntime" "$rootfs/out"
 sudo tar -xzf "$work_root/onnxruntime.tar.gz" --strip-components=1 -C "$rootfs/src/onnxruntime"

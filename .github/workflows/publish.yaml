@@ -49,13 +49,13 @@ jobs:
           IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
         run: |
           echo "$GH_TOKEN" | oras login ghcr.io --username "$GH_ACTOR" --password-stdin
-          tag="1.29.0-linux-${ARCH}"
+          tag="1.30.0-linux-${ARCH}"
           oras push \
             --artifact-type application/vnd.korolev.onnxruntime.musl.v1 \
             --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             --annotation "org.opencontainers.image.revision=${GITHUB_SHA}" \
             "${GHCR_IMAGE}:${tag}" \
-            "artifacts/onnxruntime-1.29.0-linux-${ARCH}-musl.tar.gz:application/gzip"
+            "artifacts/onnxruntime-1.30.0-linux-${ARCH}-musl.tar.gz:application/gzip"
           oras tag "${GHCR_IMAGE}:${tag}" "sha-${GITHUB_SHA}-${ARCH}"
           if [ "$IS_DEFAULT_BRANCH" = "true" ]; then
             oras tag "${GHCR_IMAGE}:${tag}" "latest-linux-${ARCH}"
