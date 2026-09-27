@@ -24,6 +24,12 @@ if [ "$prerelease" != false ] || [ "$draft" != false ]; then
   exit 1
 fi
 
+source ./onnxruntime.env
+if [ "$version" = "$ORT_VERSION" ]; then
+  echo "ONNX Runtime $version is already pinned; no update needed."
+  exit 0
+fi
+
 archive_url="https://github.com/microsoft/onnxruntime/archive/refs/tags/v${version}.tar.gz"
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT

@@ -3,6 +3,8 @@ name: Build and publish musl libraries
 on:
   push:
   workflow_dispatch:
+  repository_dispatch:
+    types: [onnxruntime-release-updated]
 
 permissions:
   contents: read
