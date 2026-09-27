@@ -1,0 +1,62 @@
+name: Build and publish musl libraries
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-onnxruntime-musl-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    name: Build and publish linux/${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            alpine_arch: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            alpine_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host tools
+        run: sudo apt-get update && sudo apt-get install --yes ca-certificates curl tar
+
+      - name: Build ONNX Runtime in Alpine/musl chroot
+        run: ./scripts/build-ort-musl.sh '${{ matrix.arch }}' '${{ matrix.alpine_arch }}'
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.3.0
+
+      - name: Publish archive to GitHub Packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+          GHCR_IMAGE: ghcr.io/korolevsoftware/onnxruntime-musle
+          ARCH: ${{ matrix.arch }}
+          IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        run: |
+          echo "$GH_TOKEN" | oras login ghcr.io --username "$GH_ACTOR" --password-stdin
+          tag="1.29.0-linux-${ARCH}"
+          oras push \
+            --artifact-type application/vnd.korolev.onnxruntime.musl.v1 \
+            --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --annotation "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            "${GHCR_IMAGE}:${tag}" \
+            "artifacts/onnxruntime-1.29.0-linux-${ARCH}-musl.tar.gz:application/gzip"
+          oras tag "${GHCR_IMAGE}:${tag}" "sha-${GITHUB_SHA}-${ARCH}"
+          if [ "$IS_DEFAULT_BRANCH" = "true" ]; then
+            oras tag "${GHCR_IMAGE}:${tag}" "latest-linux-${ARCH}"
+          fi
